@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultat - Probabilité de Calvitie</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0d6efd;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .result-card {
+            border-radius: 10px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            color: white;
+        }
+        .progress {
+            height: 25px;
+            margin: 1.5rem 0;
+            border-radius: 5px;
+        }
+        .result-value {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .back-btn {
+            width: 100%;
+            padding: 10px;
+        }
+        .explanation {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Résultat de l'analyse</h1>
+        
+        <div class="result-card" style="background-color: {{ couleur }};">
+            <h2 class="text-center">{{ categorie }}</h2>
+            <div class="result-value">{{ "%.1f"|format(probabilite) }}%</div>
+            <p class="text-center">de probabilité de calvitie</p>
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: {{ probabilite }}%; background-color: {{ couleur }};" aria-valuenow="{{ probabilite }}" aria-valuemin="0" aria-valuemax="100">{{ "%.1f"|format(probabilite) }}%</div>
+        </div>
+        
+        <div class="explanation">
+            <h3>Interprétation :</h3>
+            <p>{{ explication }}</p>
+            
+            {% if probabilite >= 60 %}
+            <div class="alert alert-danger mt-3">
+                <strong>Conseil :</strong> Consultez un dermatologue pour discuter des options de traitement et de prévention.
+            </div>
+            {% elif probabilite >= 30 %}
+            <div class="alert alert-warning mt-3">
+                <strong>Conseil :</strong> Envisagez d'adopter des habitudes saines pour les cheveux et réduisez votre niveau de stress.
+            </div>
+            {% else %}
+            <div class="alert alert-success mt-3">
+                <strong>Conseil :</strong> Continuez à bien prendre soin de vos cheveux avec des shampoings adaptés.
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="mt-4">
+            <h4>Facteurs qui peuvent influencer la calvitie :</h4>
+            <ul class="list-group">
+                <li class="list-group-item">Facteurs génétiques et antécédents familiaux</li>
+                <li class="list-group-item">Niveau de stress élevé</li>
+                <li class="list-group-item">Tabagisme</li>
+                <li class="list-group-item">Déséquilibres hormonaux</li>
+                <li class="list-group-item">Type de shampoing utilisé</li>
+                <li class="list-group-item">Âge</li>
+            </ul>
+        </div>
+        
+        <a href="/" class="btn btn-primary back-btn mt-4">Retour à l'accueil</a>
+        
+        <p class="text-center mt-4 small text-muted">
+            Note: Ce résultat est fourni à titre informatif uniquement et ne constitue pas un avis médical professionnel.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

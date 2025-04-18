@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculateur de Probabilité de Calvitie</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0d6efd;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 1rem;
+        }
+        .form-check-label {
+            font-weight: normal;
+        }
+        .help-text {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Calculateur de Probabilité de Calvitie</h1>
+        <p class="lead text-center mb-4">Remplissez ce formulaire pour obtenir une estimation de votre risque de calvitie</p>
+        
+        <form action="/predict" method="post">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="age" class="form-label">Âge</label>
+                        <input type="number" class="form-control" id="age" name="age" min="18" max="100" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="genre" class="form-label">Genre</label>
+                        <select class="form-select" id="genre" name="genre" required>
+                            <option value="male">Homme</option>
+                            <option value="female">Femme</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role_professionnel" class="form-label">Profession</label>
+                        <select class="form-select" id="role_professionnel" name="role_professionnel" required>
+                            <option value="Employee">Employé</option>
+                            <option value="Government Employee">Fonctionnaire</option>
+                            <option value="Jobless">Sans emploi</option>
+                            <option value="Entrepreneur">Entrepreneur</option>
+                            <option value="Student">Étudiant</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="province" class="form-label">Région/Province</label>
+                        <input type="text" class="form-control" id="province" name="province" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="salaire" class="form-label">Salaire annuel</label>
+                        <input type="number" class="form-control" id="salaire" name="salaire" min="0" step="1000" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">État matrimonial</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="est_marie" id="marie_oui" value="1" checked>
+                            <label class="form-check-label" for="marie_oui">Marié(e)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="est_marie" id="marie_non" value="0">
+                            <label class="form-check-label" for="marie_non">Célibataire</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Antécédents familiaux de calvitie</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="est_hereditaire" id="hereditaire_oui" value="1">
+                            <label class="form-check-label" for="hereditaire_oui">Oui</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="est_hereditaire" id="hereditaire_non" value="0" checked>
+                            <label class="form-check-label" for="hereditaire_non">Non</label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="poids" class="form-label">Poids (kg)</label>
+                        <input type="number" class="form-control" id="poids" name="poids" min="40" max="150" step="0.1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="taille" class="form-label">Taille (cm)</label>
+                        <input type="number" class="form-control" id="taille" name="taille" min="140" max="220" step="0.1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="shampoing" class="form-label">Marque de shampoing habituelle</label>
+                        <input type="text" class="form-control" id="shampoing" name="shampoing" required>
+                        <small class="help-text">Ex: Pantene, Head & Shoulders, L'Oréal, etc.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Fumeur</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="est_fumeur" id="fumeur_oui" value="1">
+                            <label class="form-check-label" for="fumeur_oui">Oui</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="est_fumeur" id="fumeur_non" value="0" checked>
+                            <label class="form-check-label" for="fumeur_non">Non</label>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="education" class="form-label">Niveau d'éducation</label>
+                        <select class="form-select" id="education" name="education" required>
+                            <option value="Elementary School">École primaire</option>
+                            <option value="Secondary School">Collège</option>
+                            <option value="High School">Lycée</option>
+                            <option value="Bachelor Degree" selected>Licence/Bachelor</option>
+                            <option value="Magister Degree">Master</option>
+                            <option value="Doctoral Degree">Doctorat</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="stress" class="form-label">Niveau de stress (1-10)</label>
+                        <input type="range" class="form-range" id="stress" name="stress" min="1" max="10" value="5" oninput="this.nextElementSibling.value = this.value">
+                        <output>5</output>
+                        <div class="d-flex justify-content-between">
+                            <small>Faible</small>
+                            <small>Modéré</small>
+                            <small>Élevé</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary submit-btn">Calculer ma probabilité de calvitie</button>
+        </form>
+        
+        <p class="text-center mt-4 small text-muted">
+            Note: Cette application est fournie à titre informatif uniquement et ne constitue pas un avis médical.
+        </p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
