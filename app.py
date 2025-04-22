@@ -6,13 +6,14 @@ import joblib
 import os
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
 app = Flask(__name__)
 
-def entrainer_modele(fichier_csv="bald_probability.csv"):
+def entrainer_modele(fichier_csv="bald_probability.csv", use_random_forest=True):
     """
     Entraîne le modèle de prédiction de calvitie et le sauvegarde.
     """
@@ -21,10 +22,6 @@ def entrainer_modele(fichier_csv="bald_probability.csv"):
     
     # Nettoyer les données (supprimer les lignes avec des valeurs manquantes)
     df_clean = df.dropna()
-    
-    # Afficher des informations sur les données pour le débogage
-    print(f"Nombre de lignes dans le jeu de données: {len(df_clean)}")
-    print(f"Colonnes: {df_clean.columns.tolist()}")
     
     # Vérifier si la colonne cible existe
     if "bald_prob" not in df_clean.columns:
@@ -38,18 +35,28 @@ def entrainer_modele(fichier_csv="bald_probability.csv"):
     cat_features = [col for col in X.columns if X[col].dtype == "object"]
     num_features = [col for col in X.columns if X[col].dtype != "object"]
     
-    print(f"Caractéristiques catégorielles: {cat_features}")
-    print(f"Caractéristiques numériques: {num_features}")
-    
-    # Créer le préprocesseur pour gérer les variables catégorielles et numériques
+    # Création du préprocesseur pour les variables catégorielles
     preprocesseur = ColumnTransformer([
         ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features)
     ], remainder="passthrough")
     
-    # Créer le pipeline avec le préprocesseur et le modèle de régression linéaire
+    # Choisir le modèle en fonction du paramètre
+    if use_random_forest:
+        # Modèle RandomForest optimisé pour de meilleures prédictions
+        regressor = RandomForestRegressor(
+            n_estimators=200,
+            max_depth=None,
+            min_samples_split=2,
+            min_samples_leaf=1,
+            random_state=42
+        )
+    else:
+        regressor = LinearRegression()
+    
+    # Créer le pipeline avec le préprocesseur et le modèle de régression
     pipeline = Pipeline(steps=[
         ("preprocessor", preprocesseur),
-        ("regressor", LinearRegression())
+        ("regressor", regressor)
     ])
     
     # Diviser les données en ensembles d'entraînement et de test
@@ -58,32 +65,28 @@ def entrainer_modele(fichier_csv="bald_probability.csv"):
     # Entraîner le modèle
     pipeline.fit(X_train, y_train)
     
-    # Évaluer le modèle
-    score = pipeline.score(X_test, y_test)
-    print(f"Score R² du modèle: {score}")
-    
     # Sauvegarder le modèle
-    joblib.dump(pipeline, 'modele_calvitie.joblib')
+    model_filename = 'modele_calvitie_rf.joblib' if use_random_forest else 'modele_calvitie.joblib'
+    joblib.dump(pipeline, model_filename)
     
     return pipeline
 
 def predire_calvitie(age, genre, role_professionnel, province, salaire, est_marie, est_hereditaire,
-                   poids, taille, shampoing, est_fumeur, education, stress):
+                   poids, taille, shampoing, est_fumeur, education, stress, use_random_forest=True):
     """
     Prédit la probabilité de calvitie en fonction des caractéristiques de la personne.
     """
+    # Déterminer le fichier de modèle en fonction du type de modèle
+    model_file = 'modele_calvitie_rf.joblib' if use_random_forest else 'modele_calvitie.joblib'
+    
     # Charger le modèle ou l'entraîner s'il n'existe pas
-    model_file = 'modele_calvitie.joblib'
     if os.path.exists(model_file):
         try:
             pipeline = joblib.load(model_file)
-            print("Modèle chargé avec succès")
         except Exception as e:
-            print(f"Erreur lors du chargement du modèle: {str(e)}")
-            pipeline = entrainer_modele()
+            pipeline = entrainer_modele(use_random_forest=use_random_forest)
     else:
-        print("Entraînement d'un nouveau modèle")
-        pipeline = entrainer_modele()
+        pipeline = entrainer_modele(use_random_forest=use_random_forest)
     
     # Créer un DataFrame avec les caractéristiques de la personne
     donnees_personne = pd.DataFrame({
@@ -102,22 +105,19 @@ def predire_calvitie(age, genre, role_professionnel, province, salaire, est_mari
         'stress': [stress]
     })
     
-    print(f"Données en entrée: {donnees_personne.to_dict()}")
-    
     # Faire la prédiction
     try:
         probabilite = pipeline.predict(donnees_personne)[0]
-        print(f"Prédiction brute: {probabilite}")
         
         # Limiter la valeur entre 0 et 1
         probabilite = max(0, min(1, probabilite))
         
         return probabilite
     except Exception as e:
-        print(f"Erreur lors de la prédiction: {str(e)}")
         # En cas d'erreur, vérifier si les colonnes correspondent à celles attendues par le modèle
         if hasattr(pipeline, 'feature_names_in_'):
-            print(f"Colonnes attendues par le modèle: {pipeline.feature_names_in_.tolist()}")
+            print("Erreur lors de la prédiction: {}".format(str(e)))
+            print("Colonnes attendues par le modèle: {}".format(pipeline.feature_names_in_.tolist()))
         raise e
 
 def interpreter_probabilite(probabilite):
@@ -144,6 +144,16 @@ def interpreter_probabilite(probabilite):
         "couleur": couleur
     }
 
+# Initialisation du modèle
+def initier_modele():
+    """Fonction pour initialiser le modèle si nécessaire"""
+    if not os.path.exists('modele_calvitie_rf.joblib'):
+        try:
+            entrainer_modele(use_random_forest=True)
+            print("Modèle créé avec succès")
+        except Exception as e:
+            print("Erreur lors de l'initialisation du modèle: {}".format(str(e)))
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -152,36 +162,25 @@ def home():
 def reset_model():
     """Endpoint pour forcer la réinitialisation du modèle"""
     try:
+        # Supprimer les anciens modèles
         if os.path.exists('modele_calvitie.joblib'):
             os.remove('modele_calvitie.joblib')
+            
+        if os.path.exists('modele_calvitie_rf.joblib'):
+            os.remove('modele_calvitie_rf.joblib')
         
-        # Entraîner un nouveau modèle
-        pipeline = entrainer_modele()
+        # Entraîner un nouveau modèle RandomForest
+        entrainer_modele(use_random_forest=True)
         
         return jsonify({
             "success": True,
-            "message": "Le modèle a été réinitialisé avec succès."
+            "message": "Le modèle RandomForest a été réinitialisé avec succès."
         })
     except Exception as e:
         return jsonify({
             "success": False,
             "error": str(e)
         })
-
-# Initialisation du modèle au démarrage
-@app.before_first_request
-def initialize_model():
-    """Initialise le modèle au premier démarrage de l'application"""
-    try:
-        # Forcer la réinitialisation du modèle en le supprimant s'il existe
-        if os.path.exists('modele_calvitie.joblib'):
-            os.remove('modele_calvitie.joblib')
-        
-        # Entraîner un nouveau modèle
-        entrainer_modele()
-        print("Modèle initialisé avec succès au démarrage de l'application")
-    except Exception as e:
-        print(f"Erreur lors de l'initialisation du modèle: {str(e)}")
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -262,9 +261,9 @@ def api_predict():
         return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False) 
-
-if __name__ == '__main__':
+    # Initialiser le modèle avant de démarrer l'application
+    initier_modele()
+    
+    # Démarrer l'application
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False) 
