@@ -22,14 +22,26 @@ def entrainer_modele(fichier_csv="bald_probability.csv"):
     # Nettoyer les données (supprimer les lignes avec des valeurs manquantes)
     df_clean = df.dropna()
     
+    # Afficher des informations sur les données pour le débogage
+    print(f"Nombre de lignes dans le jeu de données: {len(df_clean)}")
+    print(f"Colonnes: {df_clean.columns.tolist()}")
+    
+    # Vérifier si la colonne cible existe
+    if "bald_prob" not in df_clean.columns:
+        raise ValueError("La colonne 'bald_prob' n'existe pas dans le fichier CSV")
+    
     # Séparer les caractéristiques et la cible
     X = df_clean.drop("bald_prob", axis=1)
     y = df_clean["bald_prob"]
     
     # Identifier les caractéristiques catégorielles
-    cat_features = ["gender", "job_role", "province", "shampoo", "education"]
+    cat_features = [col for col in X.columns if X[col].dtype == "object"]
+    num_features = [col for col in X.columns if X[col].dtype != "object"]
     
-    # Créer le préprocesseur pour gérer les variables catégorielles
+    print(f"Caractéristiques catégorielles: {cat_features}")
+    print(f"Caractéristiques numériques: {num_features}")
+    
+    # Créer le préprocesseur pour gérer les variables catégorielles et numériques
     preprocesseur = ColumnTransformer([
         ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features)
     ], remainder="passthrough")
@@ -46,6 +58,10 @@ def entrainer_modele(fichier_csv="bald_probability.csv"):
     # Entraîner le modèle
     pipeline.fit(X_train, y_train)
     
+    # Évaluer le modèle
+    score = pipeline.score(X_test, y_test)
+    print(f"Score R² du modèle: {score}")
+    
     # Sauvegarder le modèle
     joblib.dump(pipeline, 'modele_calvitie.joblib')
     
@@ -59,8 +75,14 @@ def predire_calvitie(age, genre, role_professionnel, province, salaire, est_mari
     # Charger le modèle ou l'entraîner s'il n'existe pas
     model_file = 'modele_calvitie.joblib'
     if os.path.exists(model_file):
-        pipeline = joblib.load(model_file)
+        try:
+            pipeline = joblib.load(model_file)
+            print("Modèle chargé avec succès")
+        except Exception as e:
+            print(f"Erreur lors du chargement du modèle: {str(e)}")
+            pipeline = entrainer_modele()
     else:
+        print("Entraînement d'un nouveau modèle")
         pipeline = entrainer_modele()
     
     # Créer un DataFrame avec les caractéristiques de la personne
@@ -80,13 +102,23 @@ def predire_calvitie(age, genre, role_professionnel, province, salaire, est_mari
         'stress': [stress]
     })
     
+    print(f"Données en entrée: {donnees_personne.to_dict()}")
+    
     # Faire la prédiction
-    probabilite = pipeline.predict(donnees_personne)[0]
-    
-    # Limiter la valeur entre 0 et 1
-    probabilite = max(0, min(1, probabilite))
-    
-    return probabilite
+    try:
+        probabilite = pipeline.predict(donnees_personne)[0]
+        print(f"Prédiction brute: {probabilite}")
+        
+        # Limiter la valeur entre 0 et 1
+        probabilite = max(0, min(1, probabilite))
+        
+        return probabilite
+    except Exception as e:
+        print(f"Erreur lors de la prédiction: {str(e)}")
+        # En cas d'erreur, vérifier si les colonnes correspondent à celles attendues par le modèle
+        if hasattr(pipeline, 'feature_names_in_'):
+            print(f"Colonnes attendues par le modèle: {pipeline.feature_names_in_.tolist()}")
+        raise e
 
 def interpreter_probabilite(probabilite):
     """
@@ -115,6 +147,41 @@ def interpreter_probabilite(probabilite):
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/reset_model', methods=['GET'])
+def reset_model():
+    """Endpoint pour forcer la réinitialisation du modèle"""
+    try:
+        if os.path.exists('modele_calvitie.joblib'):
+            os.remove('modele_calvitie.joblib')
+        
+        # Entraîner un nouveau modèle
+        pipeline = entrainer_modele()
+        
+        return jsonify({
+            "success": True,
+            "message": "Le modèle a été réinitialisé avec succès."
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+# Initialisation du modèle au démarrage
+@app.before_first_request
+def initialize_model():
+    """Initialise le modèle au premier démarrage de l'application"""
+    try:
+        # Forcer la réinitialisation du modèle en le supprimant s'il existe
+        if os.path.exists('modele_calvitie.joblib'):
+            os.remove('modele_calvitie.joblib')
+        
+        # Entraîner un nouveau modèle
+        entrainer_modele()
+        print("Modèle initialisé avec succès au démarrage de l'application")
+    except Exception as e:
+        print(f"Erreur lors de l'initialisation du modèle: {str(e)}")
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -193,6 +260,10 @@ def api_predict():
         
     except Exception as e:
         return jsonify({"error": str(e)})
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False) 
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
